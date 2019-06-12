@@ -47,8 +47,10 @@ void dt_entry_list_sort_by_tags(dt_entry_list* list);
 // Sorts the entry list by directory names:
 void dt_entry_list_sort_by_dirs(dt_entry_list* list);
 
+// Clones the given tag list:
 dt_entry_list* dt_entry_list_clone(dt_entry_list*);
 
+// Runs the unit tests:
 void dt_entry_list_test();
 
 #endif //LINUX_C_DT_DT_ENTRY_LIST_H

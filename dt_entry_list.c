@@ -9,8 +9,9 @@
 #include <limits.h>
 #include <stddef.h> // NULL, size_t
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h> // malloc, qsort
-#include <string.h> // strcmp, memcpy
+#include <string.h> // strcmp, mem
 #define MAX_TAG_LENGTH 11
 
 static const size_t DEFAULT_CAPACITY = 32;
@@ -144,17 +145,17 @@ int dt_entry_list_write(const dt_entry_list* list, FILE* file)
 
 static int tag_cmp(const void* a, const void* b)
 {
-    dt_entry* ea = (dt_entry*) a;
-    dt_entry* eb = (dt_entry*) b;
-    return strcmp(dt_entry_get_tag(ea),
-                  dt_entry_get_tag(eb));
+    const dt_entry** ea = (const dt_entry**) a;
+    const dt_entry** eb = (const dt_entry**) b;
+    return strcmp(dt_entry_get_tag(*ea),
+                  dt_entry_get_tag(*eb));
 }
 
 static int dir_cmp(const void* a, const void* b) {
-    dt_entry *ea = (dt_entry *) a;
-    dt_entry *eb = (dt_entry *) b;
-    return strcmp(dt_entry_get_dir(ea),
-                  dt_entry_get_dir(eb));
+    const dt_entry** ea = (const dt_entry**) a;
+    const dt_entry** eb = (const dt_entry**) b;
+    return strcmp(dt_entry_get_dir(*ea),
+                  dt_entry_get_dir(*eb));
 }
 
 void dt_entry_list_sort_by_tags(dt_entry_list* list)
@@ -200,7 +201,8 @@ static void dt_entry_list_append_get_size_test()
     dt_entry_list list;
     dt_entry_list_construct(&list);
 
-    for (i = 0; i < sizeof(entries) / sizeof(entries[0]); i++) {
+    for (i = 0; i < sizeof(entries) /
+                    sizeof(entries[0]); i++) {
         ASSERT(dt_entry_list_size(&list) == i);
         dt_entry_list_append_entry(&list, entries[i]);
         ASSERT(dt_entry_list_size(&list) == i + 1);
@@ -215,8 +217,47 @@ static void dt_entry_list_append_get_size_test()
     dt_entry_list_destruct(&list);
 }
 
+static void dt_entry_list_sort_test()
+{
+    size_t i;
+    dt_entry* entries[] = {
+            dt_entry_alloc("fd", "df"),
+            dt_entry_alloc("at", "ta"),
+            dt_entry_alloc("re", "er"),
+            dt_entry_alloc("xz", "zx"),
+            dt_entry_alloc("js", "sj"),
+    };
+
+    dt_entry_list list;
+    dt_entry_list_construct(&list);
+
+    for (i = 0; i < sizeof(entries) /
+                    sizeof(entries[0]); i++) {
+        dt_entry_list_append_entry(&list, entries[i]);
+    }
+
+    dt_entry_list_sort_by_tags(&list);
+
+    ASSERT(dt_entry_list_get(&list, 0) == entries[1]);
+    ASSERT(dt_entry_list_get(&list, 1) == entries[0]);
+    ASSERT(dt_entry_list_get(&list, 2) == entries[4]);
+    ASSERT(dt_entry_list_get(&list, 3) == entries[2]);
+    ASSERT(dt_entry_list_get(&list, 4) == entries[3]);
+
+    dt_entry_list_sort_by_dirs(&list);
+
+    ASSERT(dt_entry_list_get(&list, 0) == entries[0]);
+    ASSERT(dt_entry_list_get(&list, 1) == entries[2]);
+    ASSERT(dt_entry_list_get(&list, 2) == entries[4]);
+    ASSERT(dt_entry_list_get(&list, 3) == entries[1]);
+    ASSERT(dt_entry_list_get(&list, 4) == entries[3]);
+
+    dt_entry_list_destruct(&list);
+}
+
 void dt_entry_list_test()
 {
     dt_entry_list_construct_destruct_test();
     dt_entry_list_append_get_size_test();
+    dt_entry_list_sort_test();
 }
