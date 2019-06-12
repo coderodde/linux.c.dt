@@ -215,6 +215,12 @@ static void dt_entry_list_construct_destruct_test()
     ASSERT(list == NULL);
 }
 
+static int dt_equals(const dt_entry* e1, const dt_entry* e2)
+{
+    return (strcmp(dt_entry_get_tag(e1), dt_entry_get_tag(e2)) == 0) &&
+           (strcmp(dt_entry_get_dir(e1), dt_entry_get_dir(e2)) == 0) ? 1 : 0;
+}
+
 static void dt_entry_list_append_get_size_test()
 {
     size_t i;
@@ -239,11 +245,11 @@ static void dt_entry_list_append_get_size_test()
         ASSERT(dt_entry_list_size(&list) == i + 1);
     }
 
-    ASSERT(dt_entry_list_get(&list, 0) == entries[0]);
-    ASSERT(dt_entry_list_get(&list, 1) == entries[1]);
-    ASSERT(dt_entry_list_get(&list, 2) == entries[2]);
-    ASSERT(dt_entry_list_get(&list, 3) == entries[3]);
-    ASSERT(dt_entry_list_get(&list, 4) == entries[4]);
+    ASSERT(dt_equals(dt_entry_list_get(&list, 0), entries[0]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 1), entries[1]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 2), entries[2]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 3), entries[3]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 4), entries[4]));
 
     dt_entry_list_destruct(&list);
 }
@@ -271,19 +277,19 @@ static void dt_entry_list_sort_test()
 
     dt_entry_list_sort_by_tags(&list);
 
-    ASSERT(dt_entry_list_get(&list, 0) == entries[1]);
-    ASSERT(dt_entry_list_get(&list, 1) == entries[0]);
-    ASSERT(dt_entry_list_get(&list, 2) == entries[4]);
-    ASSERT(dt_entry_list_get(&list, 3) == entries[2]);
-    ASSERT(dt_entry_list_get(&list, 4) == entries[3]);
+    ASSERT(dt_equals(dt_entry_list_get(&list, 0), entries[1]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 1), entries[0]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 2), entries[4]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 3), entries[2]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 4), entries[3]));
 
     dt_entry_list_sort_by_dirs(&list);
 
-    ASSERT(dt_entry_list_get(&list, 0) == entries[0]);
-    ASSERT(dt_entry_list_get(&list, 1) == entries[2]);
-    ASSERT(dt_entry_list_get(&list, 2) == entries[4]);
-    ASSERT(dt_entry_list_get(&list, 3) == entries[1]);
-    ASSERT(dt_entry_list_get(&list, 4) == entries[3]);
+    ASSERT(dt_equals(dt_entry_list_get(&list, 0), entries[0]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 1), entries[2]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 2), entries[4]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 3), entries[1]));
+    ASSERT(dt_equals(dt_entry_list_get(&list, 4), entries[3]));
 
     dt_entry_list_destruct(&list);
 }
@@ -370,6 +376,5 @@ void dt_entry_list_test()
     dt_entry_list_append_get_size_test();
     dt_entry_list_sort_test();
     dt_entry_list_file_io_test();
-    dt_entry_list_add_to_test();
     dt_entry_list_add_to_test();
 }
