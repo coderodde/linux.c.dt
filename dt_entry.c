@@ -9,13 +9,22 @@
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
-void dt_entry_construct(dt_entry* entry, char* tag, char* dir)
+void dt_entry_construct(dt_entry* entry,
+                        const char* tag,
+                        const char* dir)
 {
-    entry->m_tag = tag;
-    entry->m_dir = dir;
+    size_t len;
+
+    len = strlen(tag) + 1;
+    entry->m_tag = malloc(len);
+    memcpy(entry->m_tag, tag, len);
+
+    len = strlen(dir) + 1;
+    entry->m_dir = malloc(len);
+    memcpy(entry->m_dir, dir, len);
 }
 
-dt_entry* dt_entry_alloc(char* tag, char* dir)
+dt_entry* dt_entry_alloc(const char* tag, const char* dir)
 {
     dt_entry* e = malloc(sizeof(*e));
     dt_entry_construct(e, tag, dir);
@@ -77,6 +86,8 @@ size_t dt_entry_levenshtein_distance(const dt_entry* entry, const char* str)
 
 void dt_entry_destruct(dt_entry* entry)
 {
+    free(entry->m_tag);
+    free(entry->m_dir);
     entry->m_tag = NULL;
     entry->m_dir = NULL;
 }

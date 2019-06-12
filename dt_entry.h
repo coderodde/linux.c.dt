@@ -12,8 +12,8 @@ typedef struct dt_entry {
 } dt_entry;
 
 // Constructs the directory tagger entry.
-void dt_entry_construct(dt_entry* entry, char* tag, char* dir);
-dt_entry* dt_entry_alloc(char* tag, char* dir);
+void dt_entry_construct(dt_entry* entry, const char* tag, const char* dir);
+dt_entry* dt_entry_alloc(const char* tag, const char* dir);
 char* dt_entry_get_tag(const dt_entry* entry);
 char* dt_entry_get_dir(const dt_entry* entry);
 void dt_entry_set_tag(dt_entry* entry, char* tag);

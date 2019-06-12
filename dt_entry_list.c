@@ -40,6 +40,8 @@ dt_entry_list* dt_entry_list_alloc()
 
 void dt_entry_list_destruct(dt_entry_list* list)
 {
+
+
     free(list->m_entries);
     list->m_entries = NULL;
     list->m_capacity = 0;
@@ -78,10 +80,13 @@ static void dt_entry_list_ensure_capacity(dt_entry_list* list)
     memcpy(new_entries, list->m_entries, list->m_size * sizeof(*new_entries));
 }
 
-void dt_entry_list_append_entry(dt_entry_list* list, dt_entry* entry)
+void dt_entry_list_append_entry(dt_entry_list* list,
+                                const char* tag,
+                                const char* dir)
 {
+    dt_entry* e = dt_entry_alloc(tag, dir);
     dt_entry_list_ensure_capacity(list);
-    list->m_entries[list->m_size++] = entry;
+    list->m_entries[list->m_size++] = e;
 }
 
 dt_entry* dt_entry_list_match(const dt_entry_list* list, const char* pattern)
@@ -112,21 +117,28 @@ dt_entry* dt_entry_list_match(const dt_entry_list* list, const char* pattern)
     return best_entry;
 }
 
-int dt_entry_list_read(dt_entry_list* list, FILE* file)
+int dt_entry_list_read_from_file(dt_entry_list* list, FILE* file)
 {
     char tag[MAX_TAG_LENGTH];
     char dir[PATH_MAX];
+    char* arg_tag;
+    char* arg_dir;
 
     if (!list || !file)
         return EXIT_FAILURE;
 
-    while (fscanf(file, "%s %s", tag, dir) != EOF)
-        dt_entry_list_append_entry(list, dt_entry_alloc(tag, dir));
+    while (fscanf(file, "%s %s\n", tag, dir) != EOF) {
+        arg_tag = malloc(strlen(tag));
+        arg_dir = malloc(strlen(dir));
+        strcpy(arg_tag, tag);
+        strcpy(arg_dir, dir);
+        dt_entry_list_append_entry(list, arg_tag, arg_dir);
+    }
 
     return EXIT_SUCCESS;
 }
 
-int dt_entry_list_write(const dt_entry_list* list, FILE* file)
+int dt_entry_list_write_to_file(const dt_entry_list* list, FILE* file)
 {
     dt_entry* e;
     size_t i;
@@ -141,6 +153,8 @@ int dt_entry_list_write(const dt_entry_list* list, FILE* file)
                 dt_entry_get_dir(e));
         separator = "\n";
     }
+
+    return EXIT_SUCCESS;
 }
 
 static int tag_cmp(const void* a, const void* b)
@@ -168,15 +182,30 @@ void dt_entry_list_sort_by_dirs(dt_entry_list* list)
     qsort(list->m_entries, list->m_size, sizeof(dt_entry*), dir_cmp);
 }
 
-dt_entry_list* dt_entry_list_clone(dt_entry_list* list)
+void dt_entry_list_add_to(dt_entry_list* list, dt_entry_list* clone)
 {
     size_t i;
-    dt_entry_list* clone = dt_entry_list_alloc();
+    size_t len;
+    char* tag;
+    char* dir;
+    dt_entry* current_entry;
+    dt_entry* e;
 
-    for (i = 0; i != list->m_size; i++)
-        dt_entry_list_append_entry(clone, dt_entry_list_get(list, i));
+    for (i = 0; i != list->m_size; i++) {
+        current_entry = dt_entry_list_get(list, i);
 
-    return clone;
+        len = strlen(dt_entry_get_tag(current_entry));
+        tag = malloc(len + 1);
+        memcpy(tag, dt_entry_get_tag(current_entry), len + 1);
+
+        len = strlen(dt_entry_get_dir(current_entry));
+        dir = malloc(len + 1);
+        memcpy(dir, dt_entry_get_dir(current_entry), len + 1);
+
+
+        e = dt_entry_alloc(tag, dir);
+        dt_entry_list_append_entry(clone, tag, dir);
+    }
 }
 
 static void dt_entry_list_construct_destruct_test()
@@ -204,7 +233,9 @@ static void dt_entry_list_append_get_size_test()
     for (i = 0; i < sizeof(entries) /
                     sizeof(entries[0]); i++) {
         ASSERT(dt_entry_list_size(&list) == i);
-        dt_entry_list_append_entry(&list, entries[i]);
+        dt_entry_list_append_entry(&list,
+                                   dt_entry_get_tag(entries[i]),
+                                   dt_entry_get_dir(entries[i]));
         ASSERT(dt_entry_list_size(&list) == i + 1);
     }
 
@@ -233,7 +264,9 @@ static void dt_entry_list_sort_test()
 
     for (i = 0; i < sizeof(entries) /
                     sizeof(entries[0]); i++) {
-        dt_entry_list_append_entry(&list, entries[i]);
+        dt_entry_list_append_entry(&list,
+                                   dt_entry_get_tag(entries[i]),
+                                   dt_entry_get_dir(entries[i]));
     }
 
     dt_entry_list_sort_by_tags(&list);
@@ -255,9 +288,88 @@ static void dt_entry_list_sort_test()
     dt_entry_list_destruct(&list);
 }
 
+static int debug_tag_cmp(dt_entry* e1, dt_entry* e2)
+{
+    return strcmp(dt_entry_get_tag(e1), dt_entry_get_tag(e2)) == 0 ? 1 : 0;
+}
+
+static int debug_dir_cmp(dt_entry* e1, dt_entry* e2)
+{
+    return strcmp(dt_entry_get_dir(e1), dt_entry_get_dir(e2)) == 0 ? 1 : 0;
+}
+
+static void dt_entry_list_file_io_test()
+{
+    FILE* fin;
+    FILE* fout;
+    dt_entry_list list;
+    dt_entry_list list_2;
+    dt_entry_list_construct(&list);
+    dt_entry_list_construct(&list_2);
+
+    dt_entry* entries[] = {
+            dt_entry_alloc("home", "/home/user"),
+            dt_entry_alloc("prev", "~"),
+            dt_entry_alloc("docs", "~/Documents"),
+    };
+
+    dt_entry_list_append_entry(
+            &list,
+            dt_entry_get_tag(entries[0]),
+            dt_entry_get_dir(entries[0]));
+
+    dt_entry_list_append_entry(
+            &list,
+            dt_entry_get_tag(entries[1]),
+            dt_entry_get_dir(entries[1]));
+
+    dt_entry_list_append_entry(
+            &list,
+            dt_entry_get_tag(entries[2]),
+            dt_entry_get_dir(entries[2]));
+
+    fout = fopen("test.tags", "w");
+
+    ASSERT(dt_entry_list_write_to_file(&list, fout) == EXIT_SUCCESS);
+    fclose(fout);
+
+    fin = fopen("test.tags", "r");
+    ASSERT(dt_entry_list_read_from_file(&list_2, fin) == EXIT_SUCCESS);
+    fclose(fin);
+
+    ASSERT(dt_entry_list_size(&list)   == 3);
+    ASSERT(dt_entry_list_size(&list_2) == 3);
+
+    ASSERT(debug_tag_cmp(dt_entry_list_get(&list, 0),
+                         dt_entry_list_get(&list_2, 0)));
+
+    ASSERT(debug_tag_cmp(dt_entry_list_get(&list, 1),
+                         dt_entry_list_get(&list_2, 1)));
+
+    ASSERT(debug_tag_cmp(dt_entry_list_get(&list, 2),
+                         dt_entry_list_get(&list_2, 2)));
+
+    ASSERT(debug_dir_cmp(dt_entry_list_get(&list, 0),
+                         dt_entry_list_get(&list_2, 0)));
+
+    ASSERT(debug_dir_cmp(dt_entry_list_get(&list, 1),
+                         dt_entry_list_get(&list_2, 1)));
+
+    ASSERT(debug_dir_cmp(dt_entry_list_get(&list, 2),
+                         dt_entry_list_get(&list_2, 2)));
+}
+
+static void dt_entry_list_add_to_test()
+{
+
+}
+
 void dt_entry_list_test()
 {
     dt_entry_list_construct_destruct_test();
     dt_entry_list_append_get_size_test();
     dt_entry_list_sort_test();
+    dt_entry_list_file_io_test();
+    dt_entry_list_add_to_test();
+    dt_entry_list_add_to_test();
 }

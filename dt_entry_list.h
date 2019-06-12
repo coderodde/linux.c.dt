@@ -25,17 +25,19 @@ void dt_entry_list_free(dt_entry_list**);
 size_t dt_entry_list_size(const dt_entry_list* list);
 
 // Appends the given entry to the given entry list:
-void dt_entry_list_append_entry(dt_entry_list* list, dt_entry* entry);
+void dt_entry_list_append_entry(dt_entry_list* list,
+                                const char* tag,
+                                const char* dir);
 
 // Returns the ith directory tag:
 dt_entry* dt_entry_list_get(const dt_entry_list* list, const size_t i);
 
 // Reads the contents of the text file represented by 'file' into
 // the argument entry list:
-int dt_entry_list_read(dt_entry_list* list, FILE* file);
+int dt_entry_list_read_from_file(dt_entry_list* list, FILE* file);
 
 // Writes the entire content of the entry list to the 'file':
-int dt_entry_list_write(const dt_entry_list* list, FILE* file);
+int dt_entry_list_write_to_file(const dt_entry_list* list, FILE* file);
 
 // Performs an approximating search for an entry. If there is exact match,
 // the first entry with minimum Levenshtein distance will be returned:
@@ -48,7 +50,7 @@ void dt_entry_list_sort_by_tags(dt_entry_list* list);
 void dt_entry_list_sort_by_dirs(dt_entry_list* list);
 
 // Clones the given tag list:
-dt_entry_list* dt_entry_list_clone(dt_entry_list*);
+void dt_entry_list_add_to(dt_entry_list* list, dt_entry_list* clone);
 
 // Runs the unit tests:
 void dt_entry_list_test();
