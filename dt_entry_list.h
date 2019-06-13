@@ -7,7 +7,11 @@
 #include "dt_entry.h"
 #include <stdio.h>
 
-typedef struct dt_entry_list dt_entry_list;
+typedef struct dt_entry_list {
+    size_t m_size;
+    size_t m_capacity;
+    dt_entry** m_entries;
+} dt_entry_list;
 
 // Constructs the entry list:
 void dt_entry_list_construct(dt_entry_list*);

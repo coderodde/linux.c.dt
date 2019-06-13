@@ -16,13 +16,6 @@
 static const size_t MAX_TAG_LENGTH = 1001;
 static const size_t DEFAULT_CAPACITY = 32;
 
-typedef struct dt_entry_list {
-    size_t m_size;
-    size_t m_capacity;
-    dt_entry** m_entries;
-} dt_entry_list;
-
-
 void dt_entry_list_construct(dt_entry_list* list)
 {
     list->m_size = 0;
@@ -393,9 +386,9 @@ static void dt_entry_list_match_test()
     ASSERT(strcmp(dt_entry_get_tag(de), "root") == 0);
     ASSERT(strcmp(dt_entry_get_dir(de), "/") == 0);
 
-    de = dt_entry_list_match(&list, "hme");
-    ASSERT(strcmp(dt_entry_get_tag(de), "home") == 0);
-    ASSERT(strcmp(dt_entry_get_dir(de), "/home/user") == 0);
+    de = dt_entry_list_match(&list, "r");
+    ASSERT(strcmp(dt_entry_get_tag(de), "root") == 0);
+    ASSERT(strcmp(dt_entry_get_dir(de), "/") == 0);
 }
 
 static void dt_entry_list_append_test()
