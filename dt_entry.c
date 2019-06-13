@@ -41,34 +41,57 @@ char* dt_entry_get_dir(const dt_entry* entry)
     return entry->m_dir;
 }
 
-void dt_entry_set_tag(dt_entry* entry, char* tag)
+void dt_entry_set_tag(dt_entry *const entry, const char* tag)
 {
-    entry->m_tag = tag;
+    size_t len = strlen(tag) + 1;
+    entry->m_tag = malloc(len);
+    memcpy(entry->m_tag, tag, len);
 }
 
-void dt_entry_set_dir(dt_entry* entry, char* dir)
+void dt_entry_set_dir(dt_entry *const entry, const char* dir)
 {
-    entry->m_dir = dir;
+    size_t len = strlen(dir) + 1;
+    free(entry->m_dir);
+    entry->m_dir = malloc(len);
+    memcpy(entry->m_dir, dir, len);
 }
 
-static size_t lev_distance_impl(const char* str1, const char* str2, size_t i1, size_t i2)
+// str1 columnwise, str2 row-wise:
+static size_t lev_distance_impl(const char* str1,
+                                const char* str2,
+                                size_t len1,
+                                size_t len2)
 {
-    size_t cost, tmp1, tmp2;
+    size_t** dist = malloc((len1 + 1) * sizeof(size_t*));
+    size_t i;
+    size_t j;
+    size_t i1;
+    size_t i2;
+    size_t cost;
 
-    if (i1 == 0) return i2;
-    if (i2 == 0) return i1;
+    for (i = 0; i <= len1; i++)
+        dist[i] = malloc((len2 + 1) * sizeof(size_t));
 
-    if (str1[i1 - 1] == str2[i2 - 1])
-        cost = 0;
-    else
-        cost = 1;
+    for (i = 0; i <= len1; i++)
+        dist[i][0] = i;
 
-    tmp1 = MIN(lev_distance_impl(str1, str2, i1 - 1, i2) + 1,
-               lev_distance_impl(str1, str2, i1, i2 - 1) + 1);
+    for (i = 1; i <= len2; i++)
+        dist[0][i] = i;
 
-    tmp2 = lev_distance_impl(str1, str2, i1 - 1, i2 - 1) + cost;
+    for (i1 = 1; i1 <= len1; i1++) {
+        for (i2 = 1; i2 <= len2; i2++) {
+            if (str1[i1 - 1] == str2[i2 - 1])
+                cost = 0;
+            else
+                cost = 1;
 
-    return MIN(tmp1, tmp2);
+            dist[i1][i2] = MIN(MIN(dist[i1 - 1][i2] + 1,
+                                   dist[i1][i2 - 1] + 1),
+                             dist[i1 - 1][i2 - 1] + cost);
+        }
+    }
+
+    return dist[len1][len2];
 }
 
 static size_t lev_distance(const char* str1, const char* str2)

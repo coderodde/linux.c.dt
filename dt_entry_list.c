@@ -6,14 +6,14 @@
 #include "dt_entry.h"
 #include "my_assert.h"
 #include <linux/limits.h>
-#include <limits.h>
+#include <limits.h> // PATH_MAX
 #include <stddef.h> // NULL, size_t
-#include <stdint.h>
+#include <stdint.h> // SIZE_MAX
 #include <stdio.h>
-#include <stdlib.h> // malloc, qsort
-#include <string.h> // strcmp, mem
-#define MAX_TAG_LENGTH 11
+#include <stdlib.h> // malloc, qsort, EXIT_FAILURE, EXIT_SUCCESS
+#include <string.h> // strcmp, memcpy
 
+static const size_t MAX_TAG_LENGTH = 1001;
 static const size_t DEFAULT_CAPACITY = 32;
 
 typedef struct dt_entry_list {
@@ -40,8 +40,6 @@ dt_entry_list* dt_entry_list_alloc()
 
 void dt_entry_list_destruct(dt_entry_list* list)
 {
-
-
     free(list->m_entries);
     list->m_entries = NULL;
     list->m_capacity = 0;
@@ -77,7 +75,7 @@ static void dt_entry_list_ensure_capacity(dt_entry_list* list)
 
     new_capacity = list->m_capacity << 1;
     new_entries = malloc(new_capacity * sizeof(*new_entries));
-    memcpy(new_entries, list->m_entries, list->m_size * sizeof(*new_entries));
+    memcpy(new_entries, list->m_entries, new_capacity * sizeof(*new_entries));
 }
 
 void dt_entry_list_append_entry(dt_entry_list* list,
@@ -123,15 +121,22 @@ int dt_entry_list_read_from_file(dt_entry_list* list, FILE* file)
     char dir[PATH_MAX];
     char* arg_tag;
     char* arg_dir;
+    size_t tag_str_len;
+    size_t dir_str_len;
 
     if (!list || !file)
         return EXIT_FAILURE;
 
     while (fscanf(file, "%s %s\n", tag, dir) != EOF) {
-        arg_tag = malloc(strlen(tag));
-        arg_dir = malloc(strlen(dir));
-        strcpy(arg_tag, tag);
-        strcpy(arg_dir, dir);
+        tag_str_len = strlen(tag) + 1;
+        dir_str_len = strlen(dir) + 1;
+
+        arg_tag = malloc(tag_str_len);
+        arg_dir = malloc(dir_str_len);
+
+        strncpy(arg_tag, tag, tag_str_len);
+        strncpy(arg_dir, dir, dir_str_len);
+
         dt_entry_list_append_entry(list, arg_tag, arg_dir);
     }
 
@@ -142,15 +147,19 @@ int dt_entry_list_write_to_file(const dt_entry_list* list, FILE* file)
 {
     dt_entry* e;
     size_t i;
+    int ret;
     char* separator = "";
 
     for (i = 0; i != dt_entry_list_size(list); i++) {
         e = dt_entry_list_get(list, i);
-        fprintf(file,
-                "%s%s %s",
-                separator,
-                dt_entry_get_tag(e),
-                dt_entry_get_dir(e));
+        ret = fprintf(file,
+                     "%s%s %s",
+                     separator,
+                     dt_entry_get_tag(e),
+                     dt_entry_get_dir(e));
+
+        if (ret < 0) return EXIT_FAILURE;
+
         separator = "\n";
     }
 
@@ -182,7 +191,7 @@ void dt_entry_list_sort_by_dirs(dt_entry_list* list)
     qsort(list->m_entries, list->m_size, sizeof(dt_entry*), dir_cmp);
 }
 
-void dt_entry_list_add_to(dt_entry_list* list, dt_entry_list* clone)
+void dt_entry_list_append(dt_entry_list* list, dt_entry_list* clone)
 {
     size_t i;
     size_t len;
@@ -365,7 +374,31 @@ static void dt_entry_list_file_io_test()
                          dt_entry_list_get(&list_2, 2)));
 }
 
-static void dt_entry_list_add_to_test()
+static void dt_entry_list_match_test()
+{
+    dt_entry_list list;
+    dt_entry_list_construct(&list);
+
+    dt_entry_list_append_entry(&list, "home", "/home/user");
+    dt_entry_list_append_entry(&list, "root", "/");
+    dt_entry_list_append_entry(&list, "docs", "~/Documents");
+    dt_entry_list_append_entry(&list, "prev", "~");
+    dt_entry_list_append_entry(&list, "down", "~/Downloads");
+
+    dt_entry* de = dt_entry_list_match(&list, "do");
+    ASSERT(strcmp(dt_entry_get_tag(de), "docs") == 0);
+    ASSERT(strcmp(dt_entry_get_dir(de), "~/Documents") == 0);
+
+    de = dt_entry_list_match(&list, "r");
+    ASSERT(strcmp(dt_entry_get_tag(de), "root") == 0);
+    ASSERT(strcmp(dt_entry_get_dir(de), "/") == 0);
+
+    de = dt_entry_list_match(&list, "hme");
+    ASSERT(strcmp(dt_entry_get_tag(de), "home") == 0);
+    ASSERT(strcmp(dt_entry_get_dir(de), "/home/user") == 0);
+}
+
+static void dt_entry_list_append_test()
 {
 
 }
@@ -376,5 +409,6 @@ void dt_entry_list_test()
     dt_entry_list_append_get_size_test();
     dt_entry_list_sort_test();
     dt_entry_list_file_io_test();
-    dt_entry_list_add_to_test();
+    dt_entry_list_append_test();
+    dt_entry_list_match_test();
 }

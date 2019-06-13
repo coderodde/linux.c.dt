@@ -50,7 +50,7 @@ void dt_entry_list_sort_by_tags(dt_entry_list* list);
 void dt_entry_list_sort_by_dirs(dt_entry_list* list);
 
 // Clones the given tag list:
-void dt_entry_list_add_to(dt_entry_list* list, dt_entry_list* clone);
+void dt_entry_list_append(dt_entry_list* list, dt_entry_list* clone);
 
 // Runs the unit tests:
 void dt_entry_list_test();
