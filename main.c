@@ -7,6 +7,7 @@
 #include <string.h> // strcmp
 #include <unistd.h>
 //#define TEST
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
 const char *const RELATIVE_TAG_FILE_PATH = "/.dt/tags";
 const char *const OPERATION_DESCRIPTOR_MESSAGE = "message";
@@ -99,7 +100,6 @@ static void jump_to_previous_directory()
     char* tag;
     char* next_path;
     dt_entry* entry;
-    dt_entry* new_prev_entry;
     dt_entry_list list;
     char* tag_file_path = get_tag_file_path();
 
@@ -117,12 +117,11 @@ static void jump_to_previous_directory()
         dt_entry_set_dir(entry, get_current_working_directory());
     } else {
         next_path = get_current_working_directory();
-        new_prev_entry = dt_entry_alloc(PREV_TAG_NAME, next_path);
-        dt_entry_list_append_entry(&list, new_prev_entry);
+        dt_entry_list_append_entry(&list, PREV_TAG_NAME, next_path);
     }
 
     file = fopen(tag_file_path, "w");
-    dt_entry_list_write_to_file(file);
+    dt_entry_list_write_to_file(&list, file);
     fclose(file);
     printf("%s\n%s", OPERATION_DESCRIPTOR_MESSAGE, next_path);
 }
@@ -132,23 +131,99 @@ static int eq(const char *const str1, const char *const str2)
     return strcmp(str1, str2) == 0;
 }
 
+static void list_tags_only(dt_entry_list* list)
+{
+    dt_entry* e;
+    size_t i;
+
+    for (i = 0; i != dt_entry_list_size(list); i++) {
+        e = dt_entry_list_get(list, i);
+        printf("%s\n", dt_entry_get_tag(e));
+    }
+}
+
+static size_t get_max_tag_length(dt_entry_list* list)
+{
+    dt_entry* e;
+    char* tag;
+    size_t max_length_so_far = 0;
+    size_t i;
+
+    for (i = 0; i != dt_entry_list_size(list); i++) {
+        e = dt_entry_list_get(list, i);
+        tag = dt_entry_get_tag(e);
+        max_length_so_far = MAX(max_length_so_far, strlen(tag));
+    }
+
+    return max_length_so_far;
+}
+
+static char* get_format_str(size_t max_tag_length)
+{
+    size_t num_of_digits;
+    char* fmt; // ""
+    char buffer[4]; // Tag length maximum 1000 chars + zero terminator
+    sprintf(buffer, "%zu", max_tag_length);
+    num_of_digits = strlen(buffer);
+    fmt = malloc(9 + num_of_digits);
+    sprintf(fmt, "%%-%zus %%s\n", num_of_digits);
+    return fmt;
+}
+
+static void list_tags_and_dirs(dt_entry_list* list)
+{
+    dt_entry* e;
+    size_t i;
+    size_t max_tag_length = get_max_tag_length(list);
+    const char* tag;
+    const char* dir;
+    char* format_str = get_format_str(max_tag_length);
+
+    for (i = 0; i != dt_entry_list_size(list); i++) {
+        e = dt_entry_list_get(list, i);
+        tag = dt_entry_get_tag(e);
+        dir = dt_entry_get_dir(e);
+        printf(format_str, tag, dir);
+    }
+
+    free(format_str);
+}
+
 static void list_tag_file(const char* const flag)
 {
+    FILE* file = fopen(get_tag_file_path(), "r");
+    dt_entry_list list;
+    dt_entry_list_construct(&list);
+    dt_entry_list_read_from_file(&list, file);
 
+    if (eq(flag, FLAG_LIST_TAGS_SORTED)
+        || eq(flag, FLAG_LIST_BOTH_SORTED)) {
+        dt_entry_list_sort_by_tags(&list);
+    } else if (eq(flag, FLAG_LIST_BOTH_SORTED_DIRS)) {
+        dt_entry_list_sort_by_dirs(&list);
+    }
+
+    if (eq(flag, FLAG_LIST_TAGS) || eq(flag, FLAG_LIST_TAGS_SORTED)) {
+        list_tags_only(&list);
+    } else if (eq(flag, FLAG_LIST_BOTH)
+        || eq(flag, FLAG_LIST_BOTH_SORTED)
+        || eq(flag, FLAG_LIST_BOTH_SORTED_DIRS)){
+        list_tags_and_dirs(&list);
+    }
 }
 
 static void switch_directory(const char* const tag)
 {
-    
+
 }
 
 static void process_single_flag(char* flag)
 {
     if (eq(flag, FLAG_LIST_TAGS)
-        || eq(flag, FLAG_LIST_TAGS_SORTED
+        || eq(flag, FLAG_LIST_TAGS_SORTED)
         || eq(flag, FLAG_LIST_BOTH)
         || eq(flag, FLAG_LIST_BOTH_SORTED)
-        || eq(flag, FLAG_LIST_BOTH_SORTED_DIRS))) {
+        || eq(flag, FLAG_LIST_BOTH_SORTED_DIRS)) {
         list_tag_file(flag);
     } else {
         switch_directory(flag);
