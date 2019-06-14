@@ -3,9 +3,10 @@
 #include "my_assert.h"
 #include <linux/limits.h>
 #include <pwd.h>
-#include <stdio.h>  // printf
-#include <string.h> // strcmp
+#include <stdio.h>
+#include <string.h>
 #include <unistd.h>
+
 //#define TEST
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
@@ -52,41 +53,41 @@ static void update_previous_directory(const char* flag,
     dt_entry* prev_entry;
     FILE* file;
 
-    // Make sure that the flag is correct:
+    /* Make sure that the flag is correct: */
     if (strcmp(flag, FLAG_UPDATE_PREVIOUS) != 0) {
-        printf("%s\nExpected flag %s ",
+        printf("%s\nExpected flag %s",
                 OPERATION_DESCRIPTOR_MESSAGE,
                 FLAG_UPDATE_PREVIOUS);
         return;
     }
 
-    // Get the full path to the tags file:
+    /* Get the full path to the tags file: */
     tag_file_path = get_tag_file_path();
 
-    // Read the tags file into a list:
+    /* Read the tags file into a list: */
     file = fopen(tag_file_path, "r");
     tag_list = dt_entry_list_alloc();
     dt_entry_list_read_from_file(tag_list, file);
     fclose(file);
 
-    // Get the possible previous tag:
+    /* Get the possible previous tag: */
     prev_entry = dt_entry_list_match(tag_list, PREV_TAG_NAME);
 
-    // Get the current working directory:
+    /* Get the current working directory: */
     current_working_directory = malloc(PATH_MAX);
     getcwd(current_working_directory, PATH_MAX);
 
     if (prev_entry) {
-        // Once here, just update the dir of the previous tag:
+        /* Once here, just update the dir of the previous tag: */
         dt_entry_set_dir(prev_entry, dir);
     } else {
-        // No previous to begin with, just create one:
+        /* No previous to begin with, just create one: */
         dt_entry_list_append_entry(tag_list,
                                    PREV_TAG_NAME,
                                    dir);
     }
 
-    // Rewrite the tags file:
+    /* Rewrite the tags file: */
     file = fopen(tag_file_path, "w");
     free(tag_file_path);
     dt_entry_list_write_to_file(tag_list, file);
@@ -122,8 +123,9 @@ static void jump_to_previous_directory()
 
     file = fopen(tag_file_path, "w");
     dt_entry_list_write_to_file(&list, file);
+    dt_entry_list_destruct(&list);
     fclose(file);
-    printf("%s\n%s", OPERATION_DESCRIPTOR_MESSAGE, next_path);
+    printf("%s\n%s", OPERATION_SWITCH_DIRECTORY, next_path);
 }
 
 static int eq(const char *const str1, const char *const str2)
@@ -162,11 +164,11 @@ static char* get_format_str(size_t max_tag_length)
 {
     size_t num_of_digits;
     char* fmt; // ""
-    char buffer[4]; // Tag length maximum 1000 chars + zero terminator
+    char buffer[4]; /* Tag length maximum 1000 chars + zero terminator */
     sprintf(buffer, "%zu", max_tag_length);
     num_of_digits = strlen(buffer);
-    fmt = malloc(9 + num_of_digits);
-    sprintf(fmt, "%%-%zus %%s\n", num_of_digits);
+    fmt = malloc(10 + num_of_digits);
+    sprintf(fmt, "%%-%zus %%s\n", max_tag_length);
     return fmt;
 }
 
@@ -214,7 +216,24 @@ static void list_tag_file(const char* const flag)
 
 static void switch_directory(const char* const tag)
 {
+    dt_entry_list list;
+    dt_entry* e;
+    FILE* file;
+    char* cwd;
 
+    file = fopen(get_tag_file_path(), "r");
+    dt_entry_list_construct(&list);
+    dt_entry_list_read_from_file(&list, file);
+    e = dt_entry_list_match(&list, tag);
+    cwd = get_current_working_directory();
+
+    if (e == NULL) {
+        printf("%s\n%s", OPERATION_SWITCH_DIRECTORY, cwd);
+        update_previous_directory(FLAG_UPDATE_PREVIOUS, cwd);
+    } else {
+        update_previous_directory(FLAG_UPDATE_PREVIOUS, cwd);
+        printf("%s\n%s", OPERATION_SWITCH_DIRECTORY, dt_entry_get_dir(e));
+    }
 }
 
 static void process_single_flag(char* flag)

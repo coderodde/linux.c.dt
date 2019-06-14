@@ -33,12 +33,18 @@ dt_entry* dt_entry_alloc(const char* tag, const char* dir)
 
 char* dt_entry_get_tag(const dt_entry* entry)
 {
-    return entry->m_tag;
+    size_t len = strlen(entry->m_tag);
+    char* rv = malloc(len + 1);
+    memcpy(rv, entry->m_tag, len + 1);
+    return rv;
 }
 
 char* dt_entry_get_dir(const dt_entry* entry)
 {
-    return entry->m_dir;
+    size_t len = strlen(entry->m_dir);
+    char* rv = malloc(len + 1);
+    memcpy(rv, entry->m_dir, len + 1);
+    return rv;
 }
 
 void dt_entry_set_tag(dt_entry *const entry, const char* tag)

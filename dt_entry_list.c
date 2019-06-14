@@ -33,6 +33,12 @@ dt_entry_list* dt_entry_list_alloc()
 
 void dt_entry_list_destruct(dt_entry_list* list)
 {
+    size_t i;
+
+    for (i = 0; i != dt_entry_list_size(list); i++) {
+        dt_entry_free(&list->m_entries[i]);
+    }
+
     free(list->m_entries);
     list->m_entries = NULL;
     list->m_capacity = 0;
